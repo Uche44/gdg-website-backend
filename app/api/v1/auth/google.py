@@ -1,5 +1,5 @@
 """
-Google OAuth routes — cookie-free state verification.
+Google OAuth routes — cookie-free state verification and cookie-free sessions.
 
 The state parameter is self-contained: it's a signed token (via itsdangerous)
 that Google echoes back in the callback query string. We verify the signature,
@@ -152,37 +152,15 @@ async def google_callback(
     our_access_token = create_access_token(subject=str(user.id))
     our_refresh_token = create_refresh_token(subject=str(user.id))
 
-    # ── 5. Build the response 
-    profile_complete = str(user.profile.is_complete).lower()
-    redirect_url = (
-        f"{settings.FRONTEND_URL}/auth/callback"
-        f"?access_token={our_access_token}"
-        # f"&refresh_token={our_refresh_token}"
-        f"&profile_complete={profile_complete}"
-    )
-    
-    response = RedirectResponse(url=redirect_url)
+    # ── 5. Hand both tokens to the frontend in the redirect ───────────────
+    # No cookies: the frontend lives on a different origin than the API, so a
+    # session cookie here would be a third-party cookie and get dropped by the
+    # browser. The frontend strips these params from the URL on arrival and
+    # keeps the tokens in its own storage.
+    params = urlencode({
+        "access_token": our_access_token,
+        "refresh_token": our_refresh_token,
+        "profile_complete": str(user.profile.is_complete).lower(),
+    })
 
-    # Set access token cookie (global path — sent on every authenticated request)
-    # response.set_cookie(
-    #     key="access_token",
-    #     value=our_access_token,
-    #     httponly=True,
-    #     secure=settings.COOKIE_SECURE,
-    #     samesite=settings.cookie_samesite,
-    #     max_age=60 * settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-    #     path="/",
-    # )
-
-    # Set refresh token cookie (restricted to /auth/refresh — not sent on every request)
-    response.set_cookie(
-        key="refresh_token",
-        value=our_refresh_token,
-        httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite=settings.cookie_samesite,
-        max_age=60 * 60 * 24 * settings.REFRESH_TOKEN_EXPIRE_DAYS,
-        path="/auth/refresh",
-    )
-
-    return response
+    return RedirectResponse(url=f"{settings.FRONTEND_URL}/auth/callback?{params}")

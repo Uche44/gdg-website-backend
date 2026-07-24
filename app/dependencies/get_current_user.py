@@ -21,20 +21,20 @@ async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> User:
     """
-    Get current user from JWT token.
-    Priority:
-      1. Authorization header (Bearer token) — always takes precedence
-      2. access_token cookie — fallback for browser-based sessions
+    Get current user from the JWT bearer token.
+
+    The API is stateless and cookie-free: the frontend is served from a
+    different origin than the API, so a cookie session would be a third-party
+    cookie (blocked by default in Safari/Firefox and being phased out in
+    Chrome). The token must arrive in the Authorization header.
     """
     token: Optional[str] = None
 
-    # 1. Authorization header takes priority
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ", 1)[1]
-    else:
-        # 2. Fall back to cookie
-        token = request.cookies.get("access_token")
+    elif credentials is not None:
+        token = credentials.credentials
 
     if not token:
         raise HTTPException(

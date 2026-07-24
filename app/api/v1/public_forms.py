@@ -14,7 +14,9 @@ from app.schemas.public_form import (
 )
 
 
-router = APIRouter(prefix="/api/v1/public/forms", tags=["public"])
+# No prefix here — main.py mounts this router at /api/v1/public/forms, the same
+# as every other router. Declaring it in both places doubled the path.
+router = APIRouter(tags=["public"])
 
 
 def _build_email_subject(kind: PublicFormKind, payload: BasePublicForm) -> str:

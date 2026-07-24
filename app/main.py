@@ -2,8 +2,6 @@
 from fastapi import FastAPI
 # pyrefly: ignore [missing-import]
 from fastapi.middleware.cors import CORSMiddleware
-# pyrefly: ignore [missing-import]
-from starlette.middleware.sessions import SessionMiddleware
 from app.core.config import settings
 import app.db.base_class  # noqa: F401 — registers all models with SQLAlchemy mapper
 from app.api.v1.auth.refresh import router as refresh_router
@@ -27,26 +25,15 @@ from app.api.v1.media.upload import router as media_router
 
 app = FastAPI(title="Google Developer Group on Campus, UNN Community API")
 
-# ── Middleware (Starlette applies them in reverse order, so the LAST
-#    middleware added is the OUTERMOST wrapper – we want Session outermost) ──
-
-# 1) CORS — added first so it is the inner layer
+# ── Middleware ────────────────────────────────────────────────────────────
+# Auth is stateless bearer tokens — no session middleware and no cookies, so
+# allow_credentials stays off and the Authorization header carries the session.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-# 2) Session — added AFTER CORS so it is the OUTERMOST wrapper.
-#    This ensures the session cookie (used by Authlib to store OAuth state)
-#    is read/written on every request, including the Google callback redirect.
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=settings.SESSION_SECRET_KEY,
-    same_site="lax",
-    https_only=settings.COOKIE_SECURE,   # False locally for http://localhost
 )
 
 # # Include API routes

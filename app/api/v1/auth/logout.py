@@ -1,26 +1,14 @@
-from fastapi import APIRouter, Response
-
-from app.core.config import settings
+from fastapi import APIRouter
 
 router = APIRouter(tags=["auth"])
 
 
 @router.post("/logout")
-def logout(response: Response):
-    # Clear access token (global path)
-    response.delete_cookie(
-        key="access_token",
-        path="/",
-        samesite=settings.cookie_samesite,
-        secure=settings.COOKIE_SECURE,
-        httponly=True,
-    )
-    # Clear refresh token (restricted path)
-    response.delete_cookie(
-        key="refresh_token",
-        path="/auth/refresh",
-        samesite=settings.cookie_samesite,
-        secure=settings.COOKIE_SECURE,
-        httponly=True,
-    )
+def logout():
+    """
+    Sessions are stateless bearer tokens with no server-side or cookie state,
+    so logging out is the client discarding its tokens. This endpoint exists so
+    the frontend has a single call to make (and a place to hang token
+    revocation later, if it's ever added).
+    """
     return {"message": "Logged out successfully"}
